@@ -10,6 +10,45 @@ use winit::{
 
 use wgpu::util::DeviceExt;
 
+#[rustfmt::skip]
+
+struct Vector2 {
+    x: f32,
+    y: f32,
+}
+
+struct Vector3 {
+    x: f32,
+    y: f32,
+    z: f32,
+}
+
+struct Vector4 {
+    w: f32,
+    x: f32,
+    y: f32,
+    z: f32,
+}
+
+struct Camera {
+    eye: Vector3,
+    target: Vector3,
+    up: Vector3,
+    aspect: f32,
+    fovy: f32,
+    znear: f32,
+    zfar: f32,
+}
+
+impl Camera {
+    fn build_view_projection_matrix(&self) -> cgmath::Matrix4<f32> {
+        let view = cgmath::Matrix4::look_at_rh(self.eye, self.target, self.up);
+        let proj = cgmath::perspective(cgmath::Deg(self.fovy), self.aspect, self.znear, self.zfar);
+
+        return proj * view;
+    }
+}
+
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 struct Vertex {
@@ -75,6 +114,7 @@ pub struct State {
     num_vertices: u32,
     num_indices: u32,
     diffuse_bind_group: wgpu::BindGroup,
+    diffuse_texture: texture::Texture,
     is_surface_configured: bool,
 }
 
@@ -149,44 +189,8 @@ impl State {
             height: dimensions.1,
             depth_or_array_layers: 1, // depth: 1 == 2d texture
         };
-        let diffuse_texture = device.create_texture(&wgpu::TextureDescriptor {
-            size: texture_size,
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format: wgpu::TextureFormat::Rgba8UnormSrgb,
-            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
-            label: Some("diffuse_texture"),
-            view_formats: &[],
-        });
-
-        queue.write_texture(
-            wgpu::TexelCopyTextureInfo {
-                texture: &diffuse_texture,
-                mip_level: 0,
-                origin: wgpu::Origin3d::ZERO,
-                aspect: wgpu::TextureAspect::All,
-            },
-            &diffuse_rgba,
-            wgpu::TexelCopyBufferLayout {
-                offset: 0,
-                bytes_per_row: Some(4 * dimensions.0),
-                rows_per_image: Some(dimensions.1),
-            },
-            texture_size,
-        );
-
-        let diffuse_texture_view =
-            diffuse_texture.create_view(&wgpu::TextureViewDescriptor::default());
-        let diffuse_sampler = device.create_sampler(&wgpu::SamplerDescriptor {
-            address_mode_u: wgpu::AddressMode::ClampToEdge,
-            address_mode_v: wgpu::AddressMode::ClampToEdge,
-            address_mode_w: wgpu::AddressMode::ClampToEdge,
-            mag_filter: wgpu::FilterMode::Linear,
-            min_filter: wgpu::FilterMode::Nearest,
-            mipmap_filter: wgpu::MipmapFilterMode::Nearest,
-            ..Default::default()
-        });
+        let diffuse_texture =
+            texture::Texture::from_bytes(&device, &queue, diffuse_bytes, "happy-tree.png").unwrap();
 
         let texture_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -218,11 +222,11 @@ impl State {
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&diffuse_texture_view),
+                    resource: wgpu::BindingResource::TextureView(&diffuse_texture.view),
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,
-                    resource: wgpu::BindingResource::Sampler(&diffuse_sampler),
+                    resource: wgpu::BindingResource::Sampler(&diffuse_texture.sampler),
                 },
             ],
             label: Some("diffuse_bind_group"),
@@ -305,6 +309,7 @@ impl State {
             num_vertices,
             num_indices,
             diffuse_bind_group,
+            diffuse_texture,
             is_surface_configured: false,
         })
     }
@@ -397,7 +402,7 @@ impl ApplicationHandler<State> for App {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         #[allow(unused_mut)]
         let mut window_attributes = Window::default_attributes();
-        window_attributes.title = "Bier".to_owned();
+        window_attributes.title = "GameWindow".to_owned();
 
         #[cfg(target_arch = "wasm32")]
         {

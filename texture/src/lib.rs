@@ -1,3 +1,2 @@
-fn main() {
-    println!("Hello, world!");
-}
+mod texture;
+pub use texture::Texture;

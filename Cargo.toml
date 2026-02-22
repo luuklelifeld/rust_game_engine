@@ -1,3 +1,6 @@
 [workspace]
 members = ["game", "renderer", "texture"]
 resolver = "3"
+
+[profile.release]
+strip = true
