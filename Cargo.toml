@@ -1,5 +1,5 @@
 [workspace]
-members = ["game", "renderer", "texture"]
+members = ["game", "math", "renderer", "texture"]
 resolver = "3"
 
 [profile.release]

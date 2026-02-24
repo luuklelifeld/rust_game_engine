@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use math::{Matrix4, Vector3};
 use winit::{
     application::ApplicationHandler,
     event::*,
@@ -12,24 +13,6 @@ use wgpu::util::DeviceExt;
 
 #[rustfmt::skip]
 
-struct Vector2 {
-    x: f32,
-    y: f32,
-}
-
-struct Vector3 {
-    x: f32,
-    y: f32,
-    z: f32,
-}
-
-struct Vector4 {
-    w: f32,
-    x: f32,
-    y: f32,
-    z: f32,
-}
-
 struct Camera {
     eye: Vector3,
     target: Vector3,
@@ -41,12 +24,12 @@ struct Camera {
 }
 
 impl Camera {
-    fn build_view_projection_matrix(&self) -> cgmath::Matrix4<f32> {
-        let view = cgmath::Matrix4::look_at_rh(self.eye, self.target, self.up);
-        let proj = cgmath::perspective(cgmath::Deg(self.fovy), self.aspect, self.znear, self.zfar);
+    //fn build_view_projection_matrix(&self) -> Matrix4 {
+    //    let view = math::look_at_rh(self.eye, self.target, self.up);
+    //    let proj = cgmath::perspective(cgmath::Deg(self.fovy), self.aspect, self.znear, self.zfar);
 
-        return proj * view;
-    }
+    //    return proj * view;
+    //}
 }
 
 #[repr(C)]
